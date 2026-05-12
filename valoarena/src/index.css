@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-valorant-red: #FF4655;
+  --color-valorant-dark-red: #BD3944;
+  --color-valorant-bg: #0B0E14;
+  --color-valorant-card: rgba(21, 26, 35, 0.8);
+}
+
+@layer base {
+  body {
+    @apply bg-valorant-bg text-white antialiased;
+    font-family: var(--font-sans);
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-valorant-card border border-white/5 backdrop-blur-[10px];
+  }
+  
+  .accent-gradient {
+    background: linear-gradient(135deg, var(--color-valorant-red) 0%, var(--color-valorant-dark-red) 100%);
+  }
+  
+  .glow-cyan {
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+  }
+  
+  .val-border {
+    border-left: 4px solid var(--color-valorant-red);
+  }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 12s linear infinite;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}

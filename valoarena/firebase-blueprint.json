@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Represents a player or administrator in the system.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["player", "admin"] },
+        "balance": { "type": "number", "description": "Virtual wallet balance for entry fees and prizes" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "wins": { "type": "number" },
+            "totalPlayed": { "type": "number" },
+            "totalEarnings": { "type": "number" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "role", "balance"]
+    },
+    "Tournament": {
+      "title": "Tournament",
+      "description": "A gaming event with a specific entry fee and prize pool.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "game": { "type": "string", "enum": ["VALORANT"] },
+        "type": { "type": "string", "enum": ["DEATHMATCH"] },
+        "entryFee": { "type": "number" },
+        "prizePool": { "type": "number" },
+        "maxPlayers": { "type": "number" },
+        "playersCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["open", "full", "in-progress", "completed", "cancelled"] },
+        "startTime": { "type": "string", "format": "date-time" },
+        "winnerIds": { "type": "array", "items": { "type": "string" }, "description": "Top 3 players" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "entryFee", "status", "startTime"]
+    },
+    "Match": {
+      "title": "Match Results",
+      "description": "Detailed results of a 10-person deathmatch.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tournamentId": { "type": "string" },
+        "scores": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "userId": { "type": "string" },
+              "kills": { "type": "number" },
+              "deaths": { "type": "number" },
+              "score": { "type": "number" },
+              "rank": { "type": "number" }
+            }
+          }
+        },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and wallet data."
+    },
+    "tournaments/{tournamentId}": {
+      "schema": "Tournament",
+      "description": "Tournament metadata and state."
+    },
+    "tournaments/{tournamentId}/participants/{userId}": {
+      "schema": "object",
+      "description": "Registered participants for a tournament."
+    },
+    "tournaments/{tournamentId}/matches/{matchId}": {
+      "schema": "Match",
+      "description": "Match results for a specific tournament."
+    }
+  }
+}

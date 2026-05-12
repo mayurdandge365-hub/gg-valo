@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function userId() { return request.auth.uid; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isAdmin() { 
+      return isSignedIn() && isEmailVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // --- Users ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'role', 'balance', 'displayName']) &&
+             data.uid == request.auth.uid &&
+             data.role in ['player', 'admin'] &&
+             data.balance is number &&
+             data.displayName is string;
+    }
+    
+    match /users/{uid} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidUser(incoming()) && incoming().role == 'player' && incoming().balance == 0;
+      allow update: if isSignedIn() && uid == userId() && (
+        // Only allow updating profile info, NOT balance or role
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL'])
+      ) || (isAdmin());
+    }
+
+    // --- Tournaments ---
+    function isValidTournament(data) {
+      return data.keys().hasAll(['name', 'entryFee', 'status', 'startTime', 'game', 'type']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.entryFee is number && data.entryFee >= 0 &&
+             data.status in ['open', 'full', 'in-progress', 'completed', 'cancelled'] &&
+             data.startTime is timestamp &&
+             data.game == 'VALORANT' &&
+             data.type == 'DEATHMATCH';
+    }
+
+    match /tournaments/{tid} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidTournament(incoming());
+      allow update: if (isSignedIn() && (
+        // Admin can update anything valid
+        (isAdmin() && isValidTournament(incoming())) ||
+        // Players update playersCount during registration (relational check needed in code)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['playersCount', 'status']))
+      ));
+    }
+
+    // --- Participants (Subcollection) ---
+    match /tournaments/{tid}/participants/{puid} {
+      allow read: if true;
+      allow create: if isSignedIn() && puid == userId() && 
+                    exists(/databases/$(database)/documents/tournaments/$(tid)) &&
+                    get(/databases/$(database)/documents/tournaments/$(tid)).data.status == 'open';
+    }
+
+    // --- Matches ---
+    match /tournaments/{tid}/matches/{mid} {
+      allow read: if true;
+      allow create: if isAdmin(); 
+    }
+    
+    // --- Admins collection ---
+    match /admins/{aid} {
+      allow read: if isSignedIn();
+    }
+  }
+}

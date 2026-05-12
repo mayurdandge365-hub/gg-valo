@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function userId() { return request.auth.uid; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isAdmin() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /admins/{aid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.token.email == 'hemlata11052008@gmail.com';
+    }
+
+    match /users/{uid} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && uid == userId();
+      allow update: if isSignedIn() && uid == userId() && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'stats', 'balance'])
+      ) || isAdmin();
+    }
+
+    match /tournaments/{tid} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if (isAdmin()) || (
+        isSignedIn() && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['playersCount', 'status']) &&
+        incoming().playersCount == existing().playersCount + 1
+      );
+    }
+
+    match /tournaments/{tid}/participants/{puid} {
+      allow read: if true;
+      allow create: if isSignedIn() && puid == userId();
+    }
+
+    match /tournaments/{tid}/matches/{mid} {
+      allow read: if true;
+      allow create, update: if isAdmin();
+    }
+
+    match /transactions/{txid} {
+      allow read: if isSignedIn() && (resource.data.userId == userId() || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == userId();
+    }
+  }
+}

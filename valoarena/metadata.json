@@ -1,0 +1,6 @@
+{
+  "name": "ValoArena",
+  "description": "A premium Valorant tournament platform for competitive deathmatches with automated prize distribution, real-time score tracking, and player management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
